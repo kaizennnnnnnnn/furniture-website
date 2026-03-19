@@ -552,8 +552,50 @@
       .scroll-overlay { padding: 0 24px; }
       .scroll-panels-wrap { min-height: 320px; }
       .explode-video {
-        mask-image: radial-gradient(ellipse 110% 90% at 50% 58%, black 18%, rgba(0,0,0,0.85) 36%, rgba(0,0,0,0.55) 54%, rgba(0,0,0,0.2) 72%, transparent 90%);
-        -webkit-mask-image: radial-gradient(ellipse 110% 90% at 50% 58%, black 18%, rgba(0,0,0,0.85) 36%, rgba(0,0,0,0.55) 54%, rgba(0,0,0,0.2) 72%, transparent 90%);
+        mask-image:
+          linear-gradient(to bottom,
+            transparent 0%,
+            rgba(0,0,0,0.15) 6%,
+            rgba(0,0,0,0.55) 13%,
+            rgba(0,0,0,0.88) 21%,
+            black 30%,
+            black 70%,
+            rgba(0,0,0,0.88) 79%,
+            rgba(0,0,0,0.55) 87%,
+            rgba(0,0,0,0.15) 94%,
+            transparent 100%
+          ),
+          linear-gradient(to right,
+            transparent 0%,
+            rgba(0,0,0,0.4) 5%,
+            black 12%,
+            black 88%,
+            rgba(0,0,0,0.4) 95%,
+            transparent 100%
+          );
+        mask-composite: intersect;
+        -webkit-mask-image:
+          linear-gradient(to bottom,
+            transparent 0%,
+            rgba(0,0,0,0.15) 6%,
+            rgba(0,0,0,0.55) 13%,
+            rgba(0,0,0,0.88) 21%,
+            black 30%,
+            black 70%,
+            rgba(0,0,0,0.88) 79%,
+            rgba(0,0,0,0.55) 87%,
+            rgba(0,0,0,0.15) 94%,
+            transparent 100%
+          ),
+          linear-gradient(to right,
+            transparent 0%,
+            rgba(0,0,0,0.4) 5%,
+            black 12%,
+            black 88%,
+            rgba(0,0,0,0.4) 95%,
+            transparent 100%
+          );
+        -webkit-mask-composite: source-in;
       }
     }
 
@@ -1758,10 +1800,15 @@
       let pending   = -1;
       let rafId     = null;
       let lastPanel = -1;
-      // Higher threshold on mobile = fewer seeks per scroll = smoother
-      const SEEK_THRESHOLD = isMobile ? 0.08 : 0.025;
+      let lastSeekMs = 0;
+      // Higher threshold + time throttle on mobile = far fewer seeks = smoother
+      const SEEK_THRESHOLD = isMobile ? 0.10 : 0.025;
+      const SEEK_INTERVAL  = isMobile ? 120  : 0;    // ms between seeks on mobile
 
       function seekTo(t) {
+        const now = performance.now();
+        if (isMobile && now - lastSeekMs < SEEK_INTERVAL) { pending = t; return; }
+        lastSeekMs = now;
         seeking = true;
         if (video.fastSeek) video.fastSeek(t); else video.currentTime = t;
       }
