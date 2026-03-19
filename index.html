@@ -1092,6 +1092,26 @@
 
     /* ─── MOBILE ───────────────────────────────────────────── */
     @media (max-width: 900px) {
+      /* Fuzzy bottom gradient on hero for smooth transition to page content */
+      .hero-wrapper::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 28%;
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(253,251,247,0.18) 25%,
+          rgba(253,251,247,0.55) 50%,
+          rgba(253,251,247,0.85) 75%,
+          var(--cream) 100%
+        );
+        pointer-events: none;
+        z-index: 3;
+      }
+
       nav {
         width: calc(100% - 32px);
         padding: 12px 20px;
@@ -1766,22 +1786,28 @@
 
       const isMobile = window.innerWidth <= 900 || /Mobi|Android/i.test(navigator.userAgent);
 
-      // Canvas is the visible surface; video stays hidden for seeking only
+      // Canvas is the visible surface.
+      // IMPORTANT: never use display:none on the video — mobile browsers
+      // (iOS Safari, Android Chrome) suspend decoding for hidden elements,
+      // which means seeked events stop firing and the canvas freezes.
+      // Instead we push the video off-screen while keeping it "visible".
       const canvas = document.createElement('canvas');
       canvas.className = 'explode-video';
       video.parentNode.insertBefore(canvas, video);
-      video.style.display = 'none';
+      Object.assign(video.style, {
+        position: 'fixed', top: '-200vh', left: '-200vw',
+        width: '1px', height: '1px', opacity: '0', pointerEvents: 'none'
+      });
 
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      // On mobile render at half resolution — 4× fewer pixels, big speed gain
+      // On mobile render at half resolution — 4× fewer pixels to draw per frame
       const RES = isMobile ? 0.5 : 1;
 
       function sizeCanvas() {
         canvas.width  = Math.round(window.innerWidth  * RES);
         canvas.height = Math.round(window.innerHeight * RES);
         if (RES < 1) { canvas.style.width = '100%'; canvas.style.height = '100%'; }
-        // Fill cream so canvas is never black while video loads
         ctx.fillStyle = '#FDFBF7';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
@@ -1800,22 +1826,14 @@
       let pending   = -1;
       let rafId     = null;
       let lastPanel = -1;
-      let lastSeekMs = 0;
-      // Higher threshold + time throttle on mobile = far fewer seeks = smoother
-      const SEEK_THRESHOLD = isMobile ? 0.10 : 0.025;
-      const SEEK_INTERVAL  = isMobile ? 120  : 0;    // ms between seeks on mobile
+      const SEEK_THRESHOLD = isMobile ? 0.08 : 0.025;
 
       function seekTo(t) {
-        const now = performance.now();
-        if (isMobile && now - lastSeekMs < SEEK_INTERVAL) { pending = t; return; }
-        lastSeekMs = now;
         seeking = true;
-        if (video.fastSeek) video.fastSeek(t); else video.currentTime = t;
+        video.currentTime = t; // use currentTime — more reliable on mobile than fastSeek
       }
 
       video.addEventListener('loadedmetadata', () => { sizeCanvas(); seekTo(0); });
-
-      // Draw as soon as any frame data is available (fixes black screen on mobile)
       video.addEventListener('loadeddata',  drawCover);
       video.addEventListener('canplay',     drawCover);
 
@@ -1825,14 +1843,10 @@
         else { seeking = false; }
       });
 
-      // Use IntersectionObserver to trigger video.load() when section is near —
-      // critical for iOS Safari which ignores preload="auto"
+      // Trigger load when section nears viewport — iOS ignores preload="auto"
       const loadObserver = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          video.load();
-          loadObserver.disconnect();
-        }
-      }, { rootMargin: '300px' });
+        if (entries[0].isIntersecting) { video.load(); loadObserver.disconnect(); }
+      }, { rootMargin: '400px' });
       loadObserver.observe(story);
 
       function tick() {
