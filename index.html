@@ -547,10 +547,10 @@
 
     /* Mobile */
     @media (max-width: 900px) {
-      .scroll-story { height: 280vh; }
+      .scroll-story { height: 200vh; }
       .scroll-progress-track { display: none; }
       .scroll-overlay { padding: 0 24px; }
-      .scroll-panels-wrap { min-height: 320px; }
+      .scroll-panels-wrap { min-height: 220px; }
       .explode-video {
         mask-image:
           linear-gradient(to bottom,
@@ -1210,8 +1210,8 @@
       .hero-stats { gap: 20px; }
       .stat-num { font-size: 1.6rem; }
 
-      .scroll-story { height: 240vh; }
-      .scroll-panels-wrap { min-height: 260px; }
+      .scroll-story { height: 180vh; }
+      .scroll-panels-wrap { min-height: 200px; }
       .scroll-panel h2 { font-size: clamp(1.7rem, 7vw, 2.2rem); }
       .scroll-panel p { font-size: 0.875rem; max-width: 100%; }
 
@@ -1787,22 +1787,19 @@
       const isMobile = window.innerWidth <= 900 || /Mobi|Android/i.test(navigator.userAgent);
 
       // Canvas is the visible surface.
-      // IMPORTANT: never use display:none on the video — mobile browsers
-      // (iOS Safari, Android Chrome) suspend decoding for hidden elements,
-      // which means seeked events stop firing and the canvas freezes.
-      // Instead we push the video off-screen while keeping it "visible".
+      // Keep video in the same position but invisible — never use display:none
+      // or off-screen positioning on mobile as browsers suspend decoding.
       const canvas = document.createElement('canvas');
       canvas.className = 'explode-video';
       video.parentNode.insertBefore(canvas, video);
       Object.assign(video.style, {
-        position: 'fixed', top: '-200vh', left: '-200vw',
-        width: '1px', height: '1px', opacity: '0', pointerEvents: 'none'
+        opacity: '0', pointerEvents: 'none', zIndex: '-1'
       });
 
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      // On mobile render at half resolution — 4× fewer pixels to draw per frame
-      const RES = isMobile ? 0.5 : 1;
+      // 0.35x on mobile = ~8× fewer pixels than full-res
+      const RES = isMobile ? 0.35 : 1;
 
       function sizeCanvas() {
         canvas.width  = Math.round(window.innerWidth  * RES);
@@ -1822,15 +1819,25 @@
         ctx.drawImage(video, (cw - vw*scale)/2, (ch - vh*scale)/2, vw*scale, vh*scale);
       }
 
-      let seeking   = false;
-      let pending   = -1;
-      let rafId     = null;
-      let lastPanel = -1;
-      const SEEK_THRESHOLD = isMobile ? 0.08 : 0.025;
+      let seeking      = false;
+      let pending      = -1;
+      let rafId        = null;
+      let lastPanel    = -1;
+      let safetyTimer  = null;
+      const SEEK_THRESHOLD = isMobile ? 0.10 : 0.025;
 
       function seekTo(t) {
         seeking = true;
-        video.currentTime = t; // use currentTime — more reliable on mobile than fastSeek
+        video.currentTime = t;
+        // Safety net: if seeked never fires within 400ms (can happen on slow mobile),
+        // reset so the next scroll tick can try again
+        if (isMobile) {
+          clearTimeout(safetyTimer);
+          safetyTimer = setTimeout(() => {
+            seeking = false;
+            if (pending >= 0) { const pt = pending; pending = -1; seekTo(pt); }
+          }, 400);
+        }
       }
 
       video.addEventListener('loadedmetadata', () => { sizeCanvas(); seekTo(0); });
@@ -1838,6 +1845,7 @@
       video.addEventListener('canplay',     drawCover);
 
       video.addEventListener('seeked', () => {
+        clearTimeout(safetyTimer);
         drawCover();
         if (pending >= 0) { const t = pending; pending = -1; seekTo(t); }
         else { seeking = false; }
