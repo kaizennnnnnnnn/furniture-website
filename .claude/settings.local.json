@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(netlify logout)",
+      "Bash(netlify login)",
+      "Bash(netlify deploy --dir . --prod)",
+      "Bash(netlify deploy --dir .)"
+    ]
+  }
+}
