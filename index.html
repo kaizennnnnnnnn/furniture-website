@@ -214,15 +214,16 @@
       font-weight: 600;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--sage-lt);
+      color: rgba(255,255,255,0.90);
       margin-bottom: 24px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.35);
     }
     .eyebrow::before {
       content: '';
       display: block;
       width: 20px;
       height: 1px;
-      background: var(--sage-lt);
+      background: rgba(255,255,255,0.70);
     }
 
     .hero h1 {
@@ -1721,66 +1722,74 @@
       const fill   = document.getElementById('scrollProgressFill');
       if (!story || !video || !panels.length) return;
 
-      // ── 1. Insert a canvas that is the visible surface ──────
-      //    The video stays hidden in the DOM purely for seeking.
-      //    Canvas always shows the last fully-decoded frame,
-      //    so there is never a blank/flicker between seeks.
+      const isMobile = window.innerWidth <= 900 || /Mobi|Android/i.test(navigator.userAgent);
+
+      // Canvas is the visible surface; video stays hidden for seeking only
       const canvas = document.createElement('canvas');
-      canvas.className = 'explode-video'; // inherits all CSS incl. mask
+      canvas.className = 'explode-video';
       video.parentNode.insertBefore(canvas, video);
       video.style.display = 'none';
 
       const ctx = canvas.getContext('2d', { alpha: false });
 
+      // On mobile render at half resolution — 4× fewer pixels, big speed gain
+      const RES = isMobile ? 0.5 : 1;
+
       function sizeCanvas() {
-        canvas.width  = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width  = Math.round(window.innerWidth  * RES);
+        canvas.height = Math.round(window.innerHeight * RES);
+        if (RES < 1) { canvas.style.width = '100%'; canvas.style.height = '100%'; }
+        // Fill cream so canvas is never black while video loads
+        ctx.fillStyle = '#FDFBF7';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
       sizeCanvas();
       window.addEventListener('resize', sizeCanvas, { passive: true });
 
-      // ── 2. Draw video → canvas with object-fit:cover math ───
       function drawCover() {
         const vw = video.videoWidth, vh = video.videoHeight;
         if (!vw || !vh) return;
         const cw = canvas.width, ch = canvas.height;
         const scale = Math.max(cw / vw, ch / vh);
-        ctx.drawImage(video,
-          (cw - vw * scale) / 2,
-          (ch - vh * scale) / 2,
-          vw * scale, vh * scale
-        );
+        ctx.drawImage(video, (cw - vw*scale)/2, (ch - vh*scale)/2, vw*scale, vh*scale);
       }
 
-      // ── 3. One-seek-at-a-time queue ─────────────────────────
-      //    Never start a new seek while one is in flight.
-      //    Store only the latest desired time as `pending`.
-      let seeking    = false;
-      let pending    = -1;
-      let rafId      = null;
-      let lastPanel  = -1;
+      let seeking   = false;
+      let pending   = -1;
+      let rafId     = null;
+      let lastPanel = -1;
+      // Higher threshold on mobile = fewer seeks per scroll = smoother
+      const SEEK_THRESHOLD = isMobile ? 0.08 : 0.025;
 
-      video.addEventListener('loadedmetadata', () => {
-        sizeCanvas();
+      function seekTo(t) {
         seeking = true;
-        video.currentTime = 0;
-      });
+        if (video.fastSeek) video.fastSeek(t); else video.currentTime = t;
+      }
+
+      video.addEventListener('loadedmetadata', () => { sizeCanvas(); seekTo(0); });
+
+      // Draw as soon as any frame data is available (fixes black screen on mobile)
+      video.addEventListener('loadeddata',  drawCover);
+      video.addEventListener('canplay',     drawCover);
 
       video.addEventListener('seeked', () => {
-        drawCover(); // paint the now-ready frame to canvas immediately
-        if (pending >= 0) {
-          const t = pending;
-          pending = -1;
-          video.currentTime = t; // seeking stays true
-        } else {
-          seeking = false;
-        }
+        drawCover();
+        if (pending >= 0) { const t = pending; pending = -1; seekTo(t); }
+        else { seeking = false; }
       });
 
-      // ── 4. Scroll tick — only schedules UI work ─────────────
+      // Use IntersectionObserver to trigger video.load() when section is near —
+      // critical for iOS Safari which ignores preload="auto"
+      const loadObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          video.load();
+          loadObserver.disconnect();
+        }
+      }, { rootMargin: '300px' });
+      loadObserver.observe(story);
+
       function tick() {
         rafId = null;
-
         const rect       = story.getBoundingClientRect();
         const scrollable = story.offsetHeight - window.innerHeight;
         const progress   = Math.min(1, Math.max(0, -rect.top / scrollable));
@@ -1788,12 +1797,9 @@
 
         if (video.readyState >= 1 && video.duration) {
           if (!seeking) {
-            if (Math.abs((video.currentTime || 0) - t) > 0.025) {
-              seeking = true;
-              video.currentTime = t;
-            }
+            if (Math.abs((video.currentTime || 0) - t) > SEEK_THRESHOLD) { seekTo(t); }
           } else {
-            pending = t; // overwrite — we only ever need the latest position
+            pending = t;
           }
         }
 
