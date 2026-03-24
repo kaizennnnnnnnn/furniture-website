@@ -4,7 +4,13 @@
       "Bash(netlify logout)",
       "Bash(netlify login)",
       "Bash(netlify deploy --dir . --prod)",
-      "Bash(netlify deploy --dir .)"
+      "Bash(netlify deploy --dir .)",
+      "Bash(cp \"/c/Users/Lenovo/Downloads/residence1.jpeg\" \"/c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/residence1.jpeg\")",
+      "Bash(cp \"/c/Users/Lenovo/Downloads/House.png\" \"/c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/House.png\")",
+      "Bash(cp \"/c/Users/Lenovo/Downloads/Hotel.png\" \"/c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/Hotel.png\")",
+      "Bash(cp \"/c/Users/Lenovo/Downloads/Studio.png\" \"/c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/Studio.png\")",
+      "Bash(cp \"/c/Users/Lenovo/Downloads/Penthouse.jpeg\" \"/c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/Penthouse.jpeg\")",
+      "Bash(ls -lh /c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/*.jpeg /c/Users/Lenovo/OneDrive/Desktop/FURNITURE3/*.png)"
     ]
   }
 }

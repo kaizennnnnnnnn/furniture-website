@@ -1005,8 +1005,7 @@
       border-radius: 32px;
       padding: 80px 80px;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
       gap: 48px;
       position: relative;
       overflow: hidden;
@@ -1033,9 +1032,60 @@
       line-height: 1.1;
     }
     .cta-text h2 em { font-style: italic; }
-    .cta-text p { font-size: 0.9375rem; color: var(--warm-gray); max-width: 420px; }
+    .cta-text p { font-size: 0.9375rem; color: var(--warm-gray); max-width: 520px; }
 
-    .cta-actions { display: flex; gap: 16px; align-items: center; flex-shrink: 0; }
+    .contact-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+    .contact-form .form-full { grid-column: 1 / -1; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--warm-gray);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
+      color: var(--espresso);
+      outline: none;
+      transition: border-color 200ms, box-shadow 200ms;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: rgba(138,126,116,0.55); }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: rgba(60,40,20,0.3);
+      box-shadow: 0 0 0 3px rgba(107,124,110,0.10);
+    }
+    .form-group textarea { resize: vertical; min-height: 110px; }
+    .form-select-wrap { position: relative; }
+    .form-select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--warm-gray);
+      pointer-events: none;
+    }
+    .form-select-wrap select { width: 100%; cursor: pointer; }
+    .form-submit { display: flex; align-items: center; gap: 20px; }
+    .form-submit .btn-primary { border: none; cursor: pointer; font-family: var(--font-sans); }
+    .form-note { font-size: 0.8125rem; color: var(--warm-gray); }
 
     /* ─── FOOTER ───────────────────────────────────────────── */
     footer {
@@ -1190,9 +1240,10 @@
 
       .testimonials-grid { grid-template-columns: 1fr; }
 
-      .cta-card { flex-direction: column; align-items: flex-start; padding: 48px 32px; }
-      .cta-actions { flex-direction: column; width: 100%; }
+      .cta-card { padding: 48px 32px; }
       .cta-section { padding-inline: 24px; }
+      .contact-form { grid-template-columns: 1fr; }
+      .form-submit { flex-direction: column; align-items: flex-start; gap: 12px; }
 
       .footer-inner { grid-template-columns: 1fr 1fr; padding-inline: 24px; }
       .footer-bottom { padding-inline: 24px; flex-direction: column; gap: 12px; text-align: center; }
@@ -1232,8 +1283,7 @@
 
       .cta-card { padding: 36px 24px; }
       .cta-text h2 { font-size: clamp(1.6rem, 7vw, 2rem); }
-      .cta-actions { width: 100%; }
-      .cta-actions .btn-primary { width: 100%; justify-content: center; }
+      .form-submit .btn-primary { width: 100%; justify-content: center; }
 
       .footer-inner { grid-template-columns: 1fr; gap: 32px; padding-inline: 20px; }
       .footer-bottom { padding-inline: 20px; }
@@ -1694,19 +1744,52 @@
       <div class="cta-card reveal">
         <div class="cta-text">
           <h2>Ready to build something <em>lasting?</em></h2>
-          <p>We take on a small number of projects each year so we can give each one full attention. Tell us about your space.</p>
+          <p>We take on a small number of projects each year so we can give each one full attention. Tell us about your space and we'll be in touch.</p>
         </div>
-        <div class="cta-actions">
-          <a href="mailto:hello@formastudio.com" class="btn-primary">
-            Begin a conversation
-            <span class="icon-circle">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </a>
-          <a href="#work" class="btn-ghost">See more work first</a>
-        </div>
+        <form class="contact-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="cf-name">Full Name</label>
+            <input id="cf-name" type="text" placeholder="Jane Smith" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="cf-email">Email Address</label>
+            <input id="cf-email" type="email" placeholder="jane@example.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="cf-phone">Phone <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.7rem;color:rgba(138,126,116,0.7)">(optional)</span></label>
+            <input id="cf-phone" type="tel" placeholder="+1 (555) 000-0000" autocomplete="tel">
+          </div>
+          <div class="form-group">
+            <label for="cf-type">Project Type</label>
+            <div class="form-select-wrap">
+              <select id="cf-type">
+                <option value="" disabled selected>Select a category</option>
+                <option>Kitchen</option>
+                <option>Bedroom</option>
+                <option>Living Room</option>
+                <option>Home Office</option>
+                <option>Dining Room</option>
+                <option>Full Home</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group form-full">
+            <label for="cf-message">Tell us about your space</label>
+            <textarea id="cf-message" placeholder="Describe your project — dimensions, style preferences, timeline, or anything else that helps us understand your vision…"></textarea>
+          </div>
+          <div class="form-submit form-full">
+            <button type="submit" class="btn-primary">
+              Send enquiry
+              <span class="icon-circle">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+            <span class="form-note">We typically reply within 1–2 business days.</span>
+          </div>
+        </form>
       </div>
     </section>
   </main>
