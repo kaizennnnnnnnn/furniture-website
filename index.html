@@ -1882,9 +1882,11 @@
       });
 
       const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      // 0.25x on mobile = ~16× fewer pixels than full-res
-      const RES = isMobile ? 0.25 : 1;
+      // 0.55x on mobile — good quality while staying well under full-res cost
+      const RES = isMobile ? 0.55 : 1;
 
       function sizeCanvas() {
         canvas.width  = Math.round(window.innerWidth  * RES);
@@ -1909,21 +1911,25 @@
       let rafId        = null;
       let lastPanel    = -1;
       let safetyTimer  = null;
-      const SEEK_THRESHOLD = isMobile ? 0.12 : 0.025;
+      let lastSeekAt   = 0;
+      // Mobile: only issue a new seek every 120ms max to avoid flooding the decoder
+      const SEEK_INTERVAL  = isMobile ? 120 : 0;
+      const SEEK_THRESHOLD = isMobile ? 0.15 : 0.025;
 
       function seekTo(t) {
         seeking = true;
+        lastSeekAt = Date.now();
         // fastSeek jumps to nearest keyframe — much faster on mobile hardware
         // than currentTime which requires full inter-frame decode
         if (isMobile && video.fastSeek) video.fastSeek(t);
         else video.currentTime = t;
-        // Safety: if seeked never fires (slow device) reset after 250ms
+        // Safety: if seeked never fires (slow device) reset after 300ms
         if (isMobile) {
           clearTimeout(safetyTimer);
           safetyTimer = setTimeout(() => {
             seeking = false;
             if (pending >= 0) { const pt = pending; pending = -1; seekTo(pt); }
-          }, 250);
+          }, 300);
         }
       }
 
@@ -1953,7 +1959,8 @@
 
         const minReady = isMobile ? 2 : 1;
         if (video.readyState >= minReady && video.duration) {
-          if (!seeking) {
+          const nowReady = !seeking && (Date.now() - lastSeekAt >= SEEK_INTERVAL);
+          if (nowReady) {
             if (Math.abs((video.currentTime || 0) - t) > SEEK_THRESHOLD) { seekTo(t); }
           } else {
             pending = t;
